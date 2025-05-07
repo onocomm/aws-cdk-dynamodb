@@ -1,8 +1,8 @@
 {
-  "name": "aws-cdk-cloudfront",
+  "name": "aws-cdk-dynamodb",
   "version": "0.1.0",
   "bin": {
-    "cdk-test-ec2": "bin/cdk-cloudfront.js"
+    "cdk-test-ec2": "bin/cdk-dynamodb.js"
   },
   "scripts": {
     "build": "tsc",
