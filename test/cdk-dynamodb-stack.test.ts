@@ -1,15 +1,15 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { CdkDynamodbStack } from '../lib/cdk-dynamodb-stack';
+import { CdkDynamoDBStack } from '../lib/cdk-dynamodb-stack';
 
 describe('CdkDynamodbStack', () => {
   let template: Template;
-  let stack: CdkDynamodbStack;
-  const tableName = 'export-owner-system-csvlog';
+  let stack: CdkDynamoDBStack;
+  const tableName = 'example-table';
 
   beforeAll(() => {
     const app = new cdk.App();
-    stack = new CdkDynamodbStack(app, 'TestDynamodbStack', {
+    stack = new CdkDynamoDBStack(app, 'TestDynamodbStack', {
       env: {
         account: '123456789012', // テスト用のダミーアカウント
         region: 'us-east-1'      // テスト用のダミーリージョン
@@ -28,24 +28,32 @@ describe('CdkDynamodbStack', () => {
         TableName: tableName,
         KeySchema: [
           {
-            AttributeName: 'csv_id',
+            AttributeName: 'id',
             KeyType: 'HASH'
           },
           {
-            AttributeName: 'num',
+            AttributeName: 'date',
             KeyType: 'RANGE'
           }
         ],
-        AttributeDefinitions: [
+        AttributeDefinitions: Match.arrayWith([
           {
-            AttributeName: 'csv_id',
+            AttributeName: 'id',
             AttributeType: 'S'
           },
           {
-            AttributeName: 'num',
+            AttributeName: 'date',
             AttributeType: 'N'
+          },
+          {
+            AttributeName: 'user_id',
+            AttributeType: 'S'
+          },
+          {
+            AttributeName: 'created_at',
+            AttributeType: 'S'
           }
-        ],
+        ]),
         BillingMode: 'PAY_PER_REQUEST',
         TimeToLiveSpecification: {
           AttributeName: 'ttl',
@@ -61,6 +69,29 @@ describe('CdkDynamodbStack', () => {
       template.hasResource('AWS::DynamoDB::Table', {
         UpdateReplacePolicy: 'Delete',
         DeletionPolicy: 'Delete'
+      });
+    });
+
+    it('グローバルセカンダリインデックスが正しく設定されていること', () => {
+      template.hasResourceProperties('AWS::DynamoDB::Table', {
+        GlobalSecondaryIndexes: [
+          {
+            IndexName: 'UserIndex',
+            KeySchema: [
+              {
+                AttributeName: 'user_id',
+                KeyType: 'HASH'
+              },
+              {
+                AttributeName: 'created_at',
+                KeyType: 'RANGE'
+              }
+            ],
+            Projection: {
+              ProjectionType: 'ALL'
+            }
+          }
+        ]
       });
     });
   });

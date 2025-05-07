@@ -13,6 +13,16 @@ export class CdkDynamoDBStack extends Stack {
       SortKey: 'date',
       SortKeyType: 'number',
       TTL: 'ttl',
+      // GSIを追加
+      GlobalSecondaryIndexes: [
+        {
+          IndexName: 'UserIndex',
+          PartitionKey: 'user_id',
+          PartitionKeyType: 'string',
+          SortKey: 'created_at',
+          SortKeyType: 'string',
+        },
+      ],
       Removal: true,
     });
 

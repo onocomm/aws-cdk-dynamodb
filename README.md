@@ -8,6 +8,7 @@
 - 型安全な設定インターフェース
 - オプション項目の柔軟な設定
 - ポイントインタイムリカバリ、TTL、削除ポリシーなどの設定サポート
+- グローバルセカンダリインデックス（GSI）の完全サポート
 - スタック出力としてテーブル名とARNの自動提供
 
 ## 前提条件
@@ -41,7 +42,7 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Resources } from './cdk-dynamodb-resources';
 
-export class CdkDynamodbStack extends Stack {
+export class CdkDynamoDBStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
       
@@ -53,17 +54,17 @@ export class CdkDynamodbStack extends Stack {
       SortKey: 'date',
       SortKeyType: 'number',
       TTL: 'ttl',
+      // GSIを追加
+      GlobalSecondaryIndexes: [
+        {
+          IndexName: 'UserIndex',
+          PartitionKey: 'user_id',
+          PartitionKeyType: 'string',
+          SortKey: 'created_at',
+          SortKeyType: 'string',
+        },
+      ],
       Removal: true,  // テスト環境ではtrue、本番環境ではfalseにする
-    });
-
-    // 必要に応じて複数のテーブルを作成できます
-    new Resources(this, 'anotherExample', {
-      TableName: 'another-example-table',
-      PartitionKey: 'userId',
-      PartitionKeyType: 'string',
-      // SortKeyは省略可能
-      TTL: 'expiryTime',
-      Removal: false,  // 本番環境設定（テーブルは削除されない）
     });
   }
 }
@@ -82,6 +83,21 @@ export class CdkDynamodbStack extends Stack {
 | SortKeyType | string | いいえ | ソートキーの型（'string'または'number'） |
 | TTL | string | いいえ | TTL（有効期限）として使用する属性名 |
 | Removal | boolean | いいえ | テーブル削除ポリシー（true: DESTROY、false: RETAIN） |
+| GlobalSecondaryIndexes | object[] | いいえ | GSIの配列（詳細は下記参照） |
+
+#### グローバルセカンダリインデックス（GSI）の設定
+
+GSI設定オブジェクトの構造：
+
+| オプション | 型 | 必須 | 説明 |
+|------------|-------|----------|-------------|
+| IndexName | string | はい | インデックスの名前 |
+| PartitionKey | string | はい | インデックスのパーティションキー属性名 |
+| PartitionKeyType | 'string'\|'number' | はい | インデックスのパーティションキーの型 |
+| SortKey | string | いいえ | インデックスのソートキー属性名 |
+| SortKeyType | 'string'\|'number' | いいえ | インデックスのソートキーの型 |
+| ProjectionType | 'ALL'\|'KEYS_ONLY'\|'INCLUDE' | いいえ | インデックスの射影タイプ（デフォルト: 'ALL'） |
+| NonKeyAttributes | string[] | いいえ | ProjectionTypeが'INCLUDE'の場合に含める属性の配列 |
 
 ## デプロイ
 
@@ -108,6 +124,7 @@ npm run cdk deploy
 - すべてのテーブルでポイントインタイムリカバリが有効化されています
 - オンデマンドキャパシティモードがデフォルトで使用されます
 - テスト環境と本番環境で異なる削除ポリシーを設定できます
+- GSIのプロジェクションタイプはデフォルトで'ALL'に設定されています
 
 ## テスト
 

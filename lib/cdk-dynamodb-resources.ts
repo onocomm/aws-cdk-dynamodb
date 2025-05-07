@@ -10,6 +10,16 @@ interface ResourcesProps {
   SortKeyType?: string;
   TTL?: string;
   Removal?: boolean;
+  // 複数のGSIを配列として定義
+  GlobalSecondaryIndexes?: {
+    IndexName: string;
+    PartitionKey: string;
+    PartitionKeyType: 'string'|'number';
+    SortKey?: string;
+    SortKeyType?: 'string'|'number';
+    ProjectionType?: 'ALL'|'KEYS_ONLY'|'INCLUDE';
+    NonKeyAttributes?: string[];
+  }[];
 }
 
 export class Resources extends Construct {
@@ -25,6 +35,7 @@ export class Resources extends Construct {
       SortKeyType,
       TTL,
       Removal,
+      GlobalSecondaryIndexes,
     } = props;
 
     const KeyTypes: Record<string, dynamodb.AttributeType> = {
@@ -45,7 +56,7 @@ export class Resources extends Construct {
       
       // TTL設定
       ...( TTL ? {timeToLiveAttribute: TTL} : {}),
-      
+            
       // ポイントインタイムリカバリを有効化
       pointInTimeRecoverySpecification: {
         pointInTimeRecoveryEnabled: true
@@ -59,6 +70,29 @@ export class Resources extends Construct {
       ),
       
     });
+
+    // GSIの追加（存在する場合）
+    if (GlobalSecondaryIndexes && GlobalSecondaryIndexes.length > 0) {
+      GlobalSecondaryIndexes.forEach(gsi => {
+        table.addGlobalSecondaryIndex({
+          indexName: gsi.IndexName,
+          partitionKey: {
+            name: gsi.PartitionKey,
+            type: KeyTypes[gsi.PartitionKeyType]
+          },
+          ...(gsi.SortKey && gsi.SortKeyType ? {
+            sortKey: {
+              name: gsi.SortKey,
+              type: KeyTypes[gsi.SortKeyType]
+            }
+          } : {}),
+          projectionType: gsi.ProjectionType as dynamodb.ProjectionType || dynamodb.ProjectionType.ALL,
+          ...(gsi.ProjectionType === 'INCLUDE' && gsi.NonKeyAttributes ? {
+            nonKeyAttributes: gsi.NonKeyAttributes
+          } : {})
+        });
+      });
+    }
 
     // 出力
     new CfnOutput(this, `${TableName}TableName`, {
